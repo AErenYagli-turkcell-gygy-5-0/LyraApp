@@ -27,6 +27,9 @@ sealed interface LoginIntent {
     data class PasswordChanged(val value: String) : LoginIntent
     data object TogglePasswordVisibility : LoginIntent
     data object Submit : LoginIntent
+
+    /** "Kayıt ol" bağlantısı: Register ekranına geçiş niyeti. */
+    data object RegisterClicked : LoginIntent
 }
 
 /**
@@ -34,7 +37,11 @@ sealed interface LoginIntent {
  * böylece konfigürasyon değişiminde tekrar tetiklenmez.
  */
 sealed interface LoginEffect {
-    /** Giriş başarılı. Navigasyon ayrı bir işte kurulacağından şimdilik tüketici tarafında ele alınır. */
+    /** Giriş başarılı; ana akışa geç. */
     data object NavigateToHome : LoginEffect
+
+    /** "Kayıt ol" bağlantısı: Register ekranına geç. */
+    data object NavigateToRegister : LoginEffect
+
     data class ShowError(val message: String) : LoginEffect
 }

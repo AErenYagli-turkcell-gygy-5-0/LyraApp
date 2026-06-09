@@ -37,6 +37,7 @@ class LoginViewModel @Inject constructor(
             is LoginIntent.PasswordChanged -> updateForm { it.copy(password = intent.value) }
             is LoginIntent.TogglePasswordVisibility -> _uiState.update { it.copy(isPasswordVisible = !it.isPasswordVisible) }
             is LoginIntent.Submit -> submit()
+            is LoginIntent.RegisterClicked -> viewModelScope.launch { _effect.send(LoginEffect.NavigateToRegister) }
         }
     }
 

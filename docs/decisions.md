@@ -19,7 +19,14 @@
 
 - Seçim: **Compose Navigation**
 
-- Son Güncelleme Tarihi: 04.06.2026
+- Son Güncelleme Tarihi: 09.06.2026
+
+- Bağımlılık: `androidx.navigation:navigation-compose` **2.9.5** (version catalog: `navigationCompose`).
+
+- Uygulama: Tek `NavHost` (`ui/navigation/LyraNavHost.kt`) Auth grafiğini barındırır (başlangıç
+  hedefi Login). Navigasyon MVI ile uyumlu kurulur: ViewModel'de navigasyon API'si yoktur
+  (bkz. [architecture/mvi-viewmodel-rules.md](architecture/mvi-viewmodel-rules.md) §6); navigasyon
+  `Intent → Effect` üzerinden akar, `Route` Effect'i tüketip `NavHost`'tan gelen lambda'ları çağırır.
 
 
 ### Sunum Katmanı Mimarisi

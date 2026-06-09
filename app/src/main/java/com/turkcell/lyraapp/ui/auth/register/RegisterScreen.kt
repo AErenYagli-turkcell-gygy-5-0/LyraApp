@@ -1,4 +1,4 @@
-package com.turkcell.lyraapp.ui.auth.login
+package com.turkcell.lyraapp.ui.auth.register
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -15,9 +15,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -28,36 +31,41 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.turkcell.lyraapp.ui.icons.LyraIcons
 import com.turkcell.lyraapp.ui.theme.LyraAppTheme
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 
 /**
- * Login akışının durumlu (stateful) giriş noktası.
+ * Register akışının durumlu (stateful) giriş noktası.
  *
- * [LoginViewModel]'i Hilt'ten alır, durumu yaşam döngüsüne duyarlı şekilde toplar ve
- * tek seferlik [LoginEffect]'leri tüketir. UI ile iş mantığı arasındaki tek köprü burasıdır.
+ * [RegisterViewModel]'i Hilt'ten alır, durumu yaşam döngüsüne duyarlı şekilde toplar ve
+ * tek seferlik [RegisterEffect]'leri tüketir. Navigasyon Effect'leri buradan, [NavHost]'tan
+ * gelen lambda'lara köprülenir. UI ile iş mantığı arasındaki tek köprü burasıdır.
  */
 @Composable
-fun LoginRoute(
+fun RegisterRoute(
     onNavigateToHome: () -> Unit,
-    onNavigateToRegister: () -> Unit,
+    onNavigateToLogin: () -> Unit,
+    onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: LoginViewModel = hiltViewModel(),
+    viewModel: RegisterViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -65,14 +73,15 @@ fun LoginRoute(
     LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->
             when (effect) {
-                is LoginEffect.ShowError -> snackbarHostState.showSnackbar(effect.message)
-                LoginEffect.NavigateToHome -> onNavigateToHome()
-                LoginEffect.NavigateToRegister -> onNavigateToRegister()
+                RegisterEffect.NavigateToHome -> onNavigateToHome()
+                RegisterEffect.NavigateToLogin -> onNavigateToLogin()
+                RegisterEffect.NavigateBack -> onNavigateBack()
+                is RegisterEffect.ShowError -> snackbarHostState.showSnackbar(effect.message)
             }
         }
     }
 
-    LoginScreen(
+    RegisterScreen(
         state = uiState,
         onIntent = viewModel::onIntent,
         snackbarHostState = snackbarHostState,
@@ -81,15 +90,15 @@ fun LoginRoute(
 }
 
 /**
- * Login ("Tekrar hoş geldin") ekranı.
+ * Register ("Hesap oluştur") ekranı.
  *
  * Tamamen durumsuzdur (stateless): durumu [state] üzerinden alır, kullanıcı etkileşimlerini
  * [onIntent] ile yukarı yayımlar. İş mantığı veya state sahipliği bu katmanda bulunmaz.
  */
 @Composable
-fun LoginScreen(
-    state: LoginUiState,
-    onIntent: (LoginIntent) -> Unit,
+fun RegisterScreen(
+    state: RegisterUiState,
+    onIntent: (RegisterIntent) -> Unit,
     modifier: Modifier = Modifier,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
@@ -104,49 +113,64 @@ fun LoginScreen(
                 .padding(innerPadding)
                 .systemBarsPadding()
                 .imePadding()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp),
         ) {
-            Spacer(Modifier.weight(0.22f))
+            Spacer(Modifier.height(8.dp))
 
-            BrandLogo()
-            Spacer(Modifier.height(24.dp))
+            BackButton(onClick = { onIntent(RegisterIntent.BackClicked) })
+            Spacer(Modifier.height(16.dp))
 
             HeaderTexts()
-            Spacer(Modifier.height(28.dp))
+            Spacer(Modifier.height(24.dp))
+
+            NameFields(
+                firstName = state.firstName,
+                lastName = state.lastName,
+                onFirstNameChange = { onIntent(RegisterIntent.FirstNameChanged(it)) },
+                onLastNameChange = { onIntent(RegisterIntent.LastNameChanged(it)) },
+            )
+            Spacer(Modifier.height(14.dp))
 
             PhoneNumberField(
                 value = state.phoneNumber,
-                onValueChange = { onIntent(LoginIntent.PhoneNumberChanged(it)) },
+                onValueChange = { onIntent(RegisterIntent.PhoneNumberChanged(it)) },
             )
             Spacer(Modifier.height(14.dp))
 
             PasswordField(
                 value = state.password,
                 isPasswordVisible = state.isPasswordVisible,
-                onValueChange = { onIntent(LoginIntent.PasswordChanged(it)) },
-                onToggleVisibility = { onIntent(LoginIntent.TogglePasswordVisibility) },
+                onValueChange = { onIntent(RegisterIntent.PasswordChanged(it)) },
+                onToggleVisibility = { onIntent(RegisterIntent.TogglePasswordVisibility) },
             )
             Spacer(Modifier.height(10.dp))
 
+            PasswordStrengthIndicator(strength = state.passwordStrength)
+            Spacer(Modifier.height(6.dp))
+
             Text(
-                text = "Şifremi unuttum",
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.align(Alignment.End),
+                text = "En az 8 karakter, bir rakam içermeli.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.secondary,
             )
-            Spacer(Modifier.height(28.dp))
+            Spacer(Modifier.height(18.dp))
 
-            LoginButton(
-                enabled = state.isLoginEnabled,
+            TermsCheckbox(
+                checked = state.isTermsAccepted,
+                onCheckedChange = { onIntent(RegisterIntent.TermsAcceptedChanged(it)) },
+            )
+            Spacer(Modifier.height(24.dp))
+
+            RegisterButton(
+                enabled = state.isRegisterEnabled,
                 isLoading = state.isLoading,
-                onClick = { onIntent(LoginIntent.Submit) },
+                onClick = { onIntent(RegisterIntent.Submit) },
             )
+            Spacer(Modifier.height(20.dp))
 
-            Spacer(Modifier.weight(0.30f))
-
-            RegisterPrompt(
-                onRegisterClick = { onIntent(LoginIntent.RegisterClicked) },
+            LoginPrompt(
+                onLoginClick = { onIntent(RegisterIntent.LoginClicked) },
                 modifier = Modifier.align(Alignment.CenterHorizontally),
             )
             Spacer(Modifier.height(16.dp))
@@ -155,19 +179,12 @@ fun LoginScreen(
 }
 
 @Composable
-private fun BrandLogo() {
-    Box(
-        modifier = Modifier
-            .size(56.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.primaryContainer),
-        contentAlignment = Alignment.Center,
-    ) {
+private fun BackButton(onClick: () -> Unit) {
+    IconButton(onClick = onClick) {
         Icon(
-            imageVector = LyraIcons.Waveform,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onPrimaryContainer,
-            modifier = Modifier.size(28.dp),
+            imageVector = LyraIcons.ArrowBack,
+            contentDescription = "Geri",
+            tint = MaterialTheme.colorScheme.onSurface,
         )
     }
 }
@@ -175,17 +192,49 @@ private fun BrandLogo() {
 @Composable
 private fun HeaderTexts() {
     Text(
-        text = "Tekrar hoş geldin",
+        text = "Hesap oluştur",
         style = MaterialTheme.typography.headlineMedium,
         fontWeight = FontWeight.SemiBold,
         color = MaterialTheme.colorScheme.onSurface,
     )
     Spacer(Modifier.height(8.dp))
     Text(
-        text = "Hesabına giriş yap, kaldığın yerden dinlemeye devam et.",
+        text = "Birkaç adımda Lyra'ya katıl ve çalma listeni oluştur.",
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.secondary,
     )
+}
+
+@Composable
+private fun NameFields(
+    firstName: String,
+    lastName: String,
+    onFirstNameChange: (String) -> Unit,
+    onLastNameChange: (String) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        OutlinedTextField(
+            value = firstName,
+            onValueChange = onFirstNameChange,
+            singleLine = true,
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(12.dp),
+            placeholder = { Text("Ad") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+        )
+        OutlinedTextField(
+            value = lastName,
+            onValueChange = onLastNameChange,
+            singleLine = true,
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(12.dp),
+            placeholder = { Text("Soyad") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+        )
+    }
 }
 
 @Composable
@@ -246,8 +295,67 @@ private fun PasswordField(
     )
 }
 
+/** Şifre gücü için [RegisterUiState.PASSWORD_STRENGTH_MAX] segmentli yatay gösterge. */
 @Composable
-private fun LoginButton(
+private fun PasswordStrengthIndicator(strength: Int) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        repeat(RegisterUiState.PASSWORD_STRENGTH_MAX) { index ->
+            val filled = index < strength
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(
+                        if (filled) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.surfaceVariant
+                        },
+                    ),
+            )
+        }
+    }
+}
+
+@Composable
+private fun TermsCheckbox(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    val emphasis = SpanStyle(
+        color = MaterialTheme.colorScheme.primary,
+        fontWeight = FontWeight.Bold,
+    )
+    val annotated = buildAnnotatedString {
+        withStyle(emphasis) { append("Kullanım Koşulları") }
+        append(" ve ")
+        withStyle(emphasis) { append("Gizlilik Politikası") }
+        append("'nı okudum, kabul ediyorum.")
+    }
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Checkbox(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+        )
+        Spacer(Modifier.width(4.dp))
+        Text(
+            text = annotated,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 12.dp),
+        )
+    }
+}
+
+@Composable
+private fun RegisterButton(
     enabled: Boolean,
     isLoading: Boolean,
     onClick: () -> Unit,
@@ -268,7 +376,7 @@ private fun LoginButton(
             )
         } else {
             Text(
-                text = "Giriş yap",
+                text = "Kayıt ol",
                 style = MaterialTheme.typography.titleMedium,
             )
             Spacer(Modifier.width(8.dp))
@@ -282,8 +390,8 @@ private fun LoginButton(
 }
 
 @Composable
-private fun RegisterPrompt(
-    onRegisterClick: () -> Unit,
+private fun LoginPrompt(
+    onLoginClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -292,35 +400,43 @@ private fun RegisterPrompt(
         horizontalArrangement = Arrangement.Center,
     ) {
         Text(
-            text = "Hesabın yok mu?",
+            text = "Zaten hesabın var mı?",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.width(4.dp))
         Text(
-            text = "Kayıt ol",
+            text = "Giriş yap",
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.clickable(onClick = onRegisterClick),
+            modifier = Modifier.clickable(onClick = onLoginClick),
         )
     }
 }
 
-@Preview(name = "Login - Light", showBackground = true, showSystemUi = true)
+@Preview(name = "Register - Light", showBackground = true, showSystemUi = true)
 @Composable
-private fun LoginScreenLightPreview() {
+private fun RegisterScreenLightPreview() {
     LyraAppTheme(darkTheme = false) {
-        LoginScreen(state = LoginUiState(), onIntent = {})
+        RegisterScreen(state = RegisterUiState(), onIntent = {})
     }
 }
 
-@Preview(name = "Login - Dark", showBackground = true, showSystemUi = true)
+@Preview(name = "Register - Dark", showBackground = true, showSystemUi = true)
 @Composable
-private fun LoginScreenDarkPreview() {
+private fun RegisterScreenDarkPreview() {
     LyraAppTheme(darkTheme = true) {
-        LoginScreen(
-            state = LoginUiState(phoneNumber = "555 123 45 67", password = "secret", isLoginEnabled = true),
+        RegisterScreen(
+            state = RegisterUiState(
+                firstName = "Halit",
+                lastName = "Kalaycı",
+                phoneNumber = "555 123 45 67",
+                password = "lyra1234",
+                isTermsAccepted = true,
+                passwordStrength = 3,
+                isRegisterEnabled = true,
+            ),
             onIntent = {},
         )
     }
