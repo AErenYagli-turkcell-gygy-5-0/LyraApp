@@ -10,7 +10,7 @@ Projede verilen bütün mimarisel-teknik kararları ve karar geçmişini içeren
 
 - Son Güncelleme Tarihi*: 04.06.2026
 
-- Alternatifler: **Koin, X**
+- Alternatifler: **Koin**
 
 - Sebep: **Opsiyonel**
 
