@@ -73,3 +73,23 @@
 
 - Sebep: Backend REST API sözleşmesi tanımlı değil (`agents.md` §2.2 uydurmak yasak). Gerçek API
   geldiğinde yalnızca implementasyon ve DI bağlaması değişir; ViewModel/Contract etkilenmez.
+
+
+### Home Ekranı (Ana Sayfa)
+
+- Karar: `ui/home/` paketi altında **MVI** deseniyle `HomeContract` + `HomeViewModel` + `HomeScreen`.
+
+- Son Güncelleme Tarihi: 11.06.2026
+
+- Kapsam: Selamlama başlığı, 2 sütunlu hızlı seçim grid'i, yatay kaydırılabilir son çalınanlar
+  ve çalma listesi bölümleri, sabit mini player ve alt navigasyon çubuğu (5 sekme).
+
+- Veri katmanı: `data/home/HomeRepository` interface + `FakeHomeRepository` (stub). `di/HomeModule`
+  ile bağlanır. Gerçek API geldiğinde yalnızca implementasyon değişir.
+
+- Renk: `ArtworkVariant` enum'u; Composable scope'da `MaterialTheme.colorScheme.*Container`
+  slotlarına eşlenir — ham `Color(0xFF...)` kullanılmaz (bkz. `00-color-system.md` §1).
+
+- Navigasyon: `LyraDestination.Home("home")` eklendi. Login ve Register `onNavigateToHome`
+  lambda'ları `popUpTo(Login, inclusive=true) + launchSingleTop` ile bağlandı; auth back stack
+  temizlenir. Search / Library / Favorites / Profile navigasyonu ilgili ekranlar eklenince bağlanacak.

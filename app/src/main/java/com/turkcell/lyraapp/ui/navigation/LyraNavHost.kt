@@ -8,19 +8,18 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.turkcell.lyraapp.ui.auth.login.LoginRoute
 import com.turkcell.lyraapp.ui.auth.register.RegisterRoute
+import com.turkcell.lyraapp.ui.home.HomeRoute
 
 /**
  * Uygulamanın iskelet navigasyon yapısı.
  *
- * Tek [NavHost] Auth grafiğini barındırır; başlangıç hedefi [LyraDestination.Login]'dir.
- * Her ekranın `Route` composable'ı, MVI Effect'lerini buradan sağlanan navigasyon
- * lambda'larına köprüler (ViewModel navigasyon API'si bilmez; bkz. mvi-viewmodel-rules §6).
- *
- * Not: Ana akış (Home) henüz kapsamda değildir; `onNavigateToHome` ileride Home grafiği
- * eklendiğinde bağlanacaktır.
+ * Tek [NavHost] Auth grafiğini ve Home ekranını barındırır; başlangıç hedefi
+ * [LyraDestination.Login]'dir. MVI Effect'leri buradan sağlanan navigasyon
+ * lambda'larına köprülenir (ViewModel navigasyon API'si bilmez; bkz. mvi-viewmodel-rules §6).
  */
 @Composable
 fun LyraNavHost(
+    onToggleTheme: () -> Unit,
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
 ) {
@@ -31,7 +30,12 @@ fun LyraNavHost(
     ) {
         composable(LyraDestination.Login.route) {
             LoginRoute(
-                onNavigateToHome = { /* TODO: Home grafiği eklenince bağlanacak. */ },
+                onNavigateToHome = {
+                    navController.navigate(LyraDestination.Home.route) {
+                        popUpTo(LyraDestination.Login.route) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
                 onNavigateToRegister = {
                     navController.navigate(LyraDestination.Register.route) {
                         launchSingleTop = true
@@ -42,7 +46,12 @@ fun LyraNavHost(
 
         composable(LyraDestination.Register.route) {
             RegisterRoute(
-                onNavigateToHome = { /* TODO: Home grafiği eklenince bağlanacak. */ },
+                onNavigateToHome = {
+                    navController.navigate(LyraDestination.Home.route) {
+                        popUpTo(LyraDestination.Login.route) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
                 onNavigateToLogin = {
                     navController.navigate(LyraDestination.Login.route) {
                         popUpTo(LyraDestination.Login.route) { inclusive = false }
@@ -50,6 +59,16 @@ fun LyraNavHost(
                     }
                 },
                 onNavigateBack = { navController.popBackStack() },
+            )
+        }
+
+        composable(LyraDestination.Home.route) {
+            HomeRoute(
+                onToggleTheme = onToggleTheme,
+                onNavigateToSearch = { /* TODO: Search ekranı eklenince bağlanacak. */ },
+                onNavigateToLibrary = { /* TODO: Library ekranı eklenince bağlanacak. */ },
+                onNavigateToFavorites = { /* TODO: Favorites ekranı eklenince bağlanacak. */ },
+                onNavigateToProfile = { /* TODO: Profile ekranı eklenince bağlanacak. */ },
             )
         }
     }
